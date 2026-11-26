@@ -39,23 +39,22 @@ class Manager:
         self.LOGIN_API = "/cgi-bin/srun_portal"
         self.BASE, self.AC_ID = self._detect_base_url()
 
-    def _detect_base_url(self) -> tuple[str, str]:
-        # ac_id = None
+    def _search_acid(self, data: str) -> str | None:
+        ac_id = re.search("ac_id=[0-9]*", data)
+        if ac_id is not None:
+            ac_id = re.search("[0-9]+", ac_id.group(0))
+        if ac_id is not None:
+            ac_id = ac_id.group(0)
+        return ac_id
 
+    def _detect_base_url(self) -> tuple[str, str]:
         url = "https://portal.hdu.edu.cn"
         try:
             with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
-                # PUBLIC_NET_WARNING = "此网站仅限于内部网络（内网）访问，而您当前所使用的访问地址属于公共网络（公网），因此无法直接访问。"
                 data = res.read().decode("utf-8", errors="replace")
-                # if data == PUBLIC_NET_WARNING:
-                #     raise urllib.error.URLError(PUBLIC_NET_WARNING)
-                data = re.search("ac_id=[0-9]*", data)
-                if data is not None:
-                    data = re.search("[0-9]+", data.group(0))
-                if data is not None:
-                    ac_id = data.group(0)
-            # if ac_id is not None:
-            return url, ac_id
+            ac_id = self._search_acid(data)
+            if ac_id is not None:
+                return url, ac_id
         except urllib.error.URLError:
             pass
 
@@ -63,13 +62,9 @@ class Manager:
         try:
             with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
                 data = res.read().decode("utf-8", errors="replace")
-                data = re.search("ac_id=[0-9]*", data)
-                if data is not None:
-                    data = re.search("[0-9]+", data.group(0))
-                if data is not None:
-                    ac_id = data.group(0)
-            # if ac_id is not None:
-            return url, ac_id
+            ac_id = self._search_acid(data)
+            if ac_id is not None:
+                return url, ac_id
         except urllib.error.URLError:
             pass
 
@@ -77,19 +72,13 @@ class Manager:
         try:
             with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
                 data = res.url
-                data = re.search("ac_id=[0-9]*", data)
-                if data is not None:
-                    data = re.search("[0-9]+", data.group(0))
-                if data is not None:
-                    ac_id = data.group(0)
-            # if ac_id is not None:
-            return url, ac_id
+            ac_id = self._search_acid(data)
+            if ac_id is not None:
+                return url, ac_id
         except urllib.error.URLError:
             pass
 
-        # if ac_id is None:
-        #     raise NoAvailablePortalError("Not got 'ac_id'.")
-        raise NoAvailablePortalError("No available base URL, may not in HDU network.")
+        raise NoAvailablePortalError("No available portal, may not in HDU network.")
 
     def _get_ip(self, username: str | None = None) -> str:
         if username is not None:
