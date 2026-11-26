@@ -63,8 +63,8 @@ class Manager:
                     data = re.search("[0-9]+", data.group(0))
                 if data is not None:
                     ac_id = data.group(0)
-            if ac_id is not None:
-                return url, ac_id
+            # if ac_id is not None:
+            return url, ac_id
         except urllib.error.URLError:
             pass
 
@@ -77,8 +77,8 @@ class Manager:
                     data = re.search("[0-9]+", data.group(0))
                 if data is not None:
                     ac_id = data.group(0)
-            if ac_id is not None:
-                return url, ac_id
+            # if ac_id is not None:
+            return url, ac_id
         except urllib.error.URLError:
             pass
 
@@ -91,8 +91,8 @@ class Manager:
                     data = re.search("[0-9]+", data.group(0))
                 if data is not None:
                     ac_id = data.group(0)
-            if ac_id is not None:
-                return url, ac_id
+            # if ac_id is not None:
+            return url, ac_id
         except urllib.error.URLError:
             pass
 
