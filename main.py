@@ -184,8 +184,6 @@ class Manager:
     def logout(self, username: str | None = None, ip: str | None = None) -> str:
         if ip is not None and not _is_legal_ip(ip):
             raise ValueError(f"Invalid IP: '{ip}'.")
-        if ip is None and username is None:
-            raise ValueError("'ip' and 'username' cannot be both None.")
         if ip is None:
             ip = self._get_ip()
         if username is None:
