@@ -68,10 +68,10 @@ class Manager:
         except urllib.error.URLError:
             pass
 
-        url = "https://login.hdu.edu.cn"
+        url = "https://yue.hdu.edu.cn"
         try:
             with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
-                data = res.url
+                data = res.read().decode("utf-8", errors="replace")
                 data = re.search("ac_id=[0-9]*", data)
                 if data is not None:
                     data = re.search("[0-9]+", data.group(0))
@@ -82,10 +82,10 @@ class Manager:
         except urllib.error.URLError:
             pass
 
-        url = "https://yue.hdu.edu.cn"
+        url = "https://login.hdu.edu.cn"
         try:
             with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
-                data = res.read().decode("utf-8", errors="replace")
+                data = res.url
                 data = re.search("ac_id=[0-9]*", data)
                 if data is not None:
                     data = re.search("[0-9]+", data.group(0))
