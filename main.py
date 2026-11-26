@@ -27,21 +27,12 @@ def _is_legal_ip(ip: str) -> bool:
     except socket.error:
         return False
 
-def _get_jsonp_req(url: str, params: dict[str, Any], ischeck: bool = True) -> Any:
-    CALLBACK = "callback"
-    url = f"{url}?callback={CALLBACK}&{urllib.parse.urlencode(params)}"
-    if ischeck:
-        return url
-    with urllib.request.urlopen(url) as res:
-        data = res.read().decode("utf-8", errors="replace")
-        data = data[len(CALLBACK) + 1 : -1]
-    return json.loads(data)
-
 
 class Manager:
 
     def __init__(self):
         self.TIMEOUT = 1
+        self.CALLBACK = "callback"
         self.TOKEN_API = "/cgi-bin/get_challenge"
         self.INFO_API = "/cgi-bin/rad_user_info"
         self.LOGOUT_API = "/cgi-bin/rad_user_dm"
@@ -105,19 +96,27 @@ class Manager:
             ip = socket.gethostbyname(socket.gethostname())
             url = f"{self.BASE}{self.TOKEN_API}"
             params = {"username": username, "ip": ip}
-            data = _get_jsonp_req(url, params, ischeck=False)
+            data = self.get_jsonp_req(url, params)
             return data["client_ip"]
 
         ip = socket.gethostbyname(socket.gethostname())
-        data = self.info(ip, ischeck=False)
+        data = self.get_jsonp_req(self.info(ip))
         if "client_ip" in data:
             return data["client_ip"]
 
         ip = "127.0.0.1"
-        data = self.info(ip, ischeck=False)
+        data = self.get_jsonp_req(self.info(ip))
         return data["client_ip"]
 
-    def info(self, ip: str | None, ischeck: bool = True) -> Any:
+    def get_jsonp_req(self, url: str, params: dict | None = None) -> Any:
+        if params is not None:
+            url = f"{url}?callback={self.CALLBACK}&{urllib.parse.urlencode(params)}"
+        with urllib.request.urlopen(url) as res:
+            data = res.read().decode("utf-8", errors="replace")
+            data = data[len(self.CALLBACK) + 1 : -1]
+        return json.loads(data)
+
+    def info(self, ip: str | None) -> Any:
         if ip is not None and not _is_legal_ip(ip):
             raise ValueError(f"Invalid IP: '{ip}'.")
         if ip is None:
@@ -125,9 +124,9 @@ class Manager:
 
         url = f"{self.BASE}{self.INFO_API}"
         params = {"ip": ip}
-        return _get_jsonp_req(url, params, ischeck)
+        return f"{url}?callback={self.CALLBACK}&{urllib.parse.urlencode(params)}"
 
-    def login(self, username: str, password: str, ip: str | None = None, ischeck: bool = True) -> Any:
+    def login(self, username: str, password: str, ip: str | None = None) -> str:
         if ip is not None and not _is_legal_ip(ip):
             raise ValueError(f"Invalid IP: '{ip}'.")
         if ip is None:
@@ -143,7 +142,7 @@ class Manager:
 
         token_url = f"{self.BASE}{self.TOKEN_API}"
         token_params = {"username": username, "ip": ip}
-        token = _get_jsonp_req(token_url, token_params, False)
+        token = self.get_jsonp_req(token_url, token_params)
         token = token["challenge"]
 
         hmd5 = hmac.new(token.encode(), password.encode(), hashlib.md5).hexdigest()
@@ -180,9 +179,9 @@ class Manager:
             "type": TYPE
         }
         url = f"{self.BASE}{self.LOGIN_API}"
-        return _get_jsonp_req(url, params, ischeck)
+        return f"{url}?callback={self.CALLBACK}&{urllib.parse.urlencode(params)}"
 
-    def logout(self, username: str | None = None, ip: str | None = None, ischeck: bool = True) -> Any:
+    def logout(self, username: str | None = None, ip: str | None = None) -> str:
         if ip is not None and not _is_legal_ip(ip):
             raise ValueError(f"Invalid IP: '{ip}'.")
         if ip is None and username is None:
@@ -190,7 +189,7 @@ class Manager:
         if ip is None:
             ip = self._get_ip()
         if username is None:
-            data = self.info(ip, ischeck=False)
+            data = self.get_jsonp_req(self.info(ip))
             if data.get("error") == "not_online_error":
                 raise NotOnlineError(f"'{ip}' is not online.")
             if "user_name" not in data:
@@ -211,7 +210,7 @@ class Manager:
             "unbind": UNBIND,
             "sign": sign
         }
-        return _get_jsonp_req(url, params, ischeck)
+        return f"{url}?callback={self.CALLBACK}&{urllib.parse.urlencode(params)}"
 
 
 def main():
@@ -234,18 +233,19 @@ def main():
     logout_parsers.add_argument("--username")
 
     args = parser.parse_args()
-    ischeck = not args.y
     manager = Manager()
-    res = None
 
     if args.mode == "info":
-        res = manager.info(args.ip, ischeck=ischeck)
+        res = manager.info(args.ip)
     elif args.mode == "login":
-        res = manager.login(args.username, args.password, args.ip, ischeck=ischeck)
+        res = manager.login(args.username, args.password, args.ip)
     elif args.mode == "logout":
-        res = manager.logout(args.username, args.ip, ischeck=ischeck)
+        res = manager.logout(args.username, args.ip)
 
-    if ischeck:
+    if args.y:
+        res = manager.get_jsonp_req(res)
+
+    if not args.y:
         print(f"Add '-y' to send GET request: \n{res}")
     elif isinstance(res, dict):
         print(f"Result:\n{json.dumps(res, indent=2, ensure_ascii=False)}")
