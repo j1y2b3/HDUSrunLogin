@@ -11,7 +11,7 @@ class Handler(BaseHTTPRequestHandler):
 
         manager = Manager()
         print(manager.logout(ip=ip))
-        print(manager.logout(ip=ip, ischeck=False))
+        print(manager.get_jsonp_req(manager.logout(ip=ip)))
 
         body = "啥都木有\n".encode()
         self.send_response(200)
