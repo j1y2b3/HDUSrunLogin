@@ -1,6 +1,7 @@
 import argparse
 import hashlib
 import hmac
+import ipaddress
 import json
 import re
 import time
@@ -22,9 +23,9 @@ class NotOnlineError(RuntimeError):
 
 def _is_legal_ip(ip: str) -> bool:
     try:
-        socket.inet_aton(ip)
+        ipaddress.IPv4Address(ip)
         return True
-    except socket.error:
+    except ipaddress.AddressValueError:
         return False
 
 
@@ -97,10 +98,10 @@ class Manager:
         data = self.get_jsonp_req(self.info(ip))
         return data["client_ip"]
 
-    def get_jsonp_req(self, url: str, params: dict | None = None) -> Any:
+    def get_jsonp_req(self, url: str, params: dict[str, str] | None = None) -> Any:
         if params is not None:
             url = f"{url}?callback={self.CALLBACK}&{urllib.parse.urlencode(params)}"
-        with urllib.request.urlopen(url) as res:
+        with urllib.request.urlopen(url, timeout=self.TIMEOUT) as res:
             data = res.read().decode("utf-8", errors="replace")
             data = data[len(self.CALLBACK) + 1 : -1]
         return json.loads(data)
